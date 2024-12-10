@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "766649223975",
+    "firebase_url": "https://unityhub-recyclefood-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "unityhub-recyclefood",
+    "storage_bucket": "unityhub-recyclefood.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:766649223975:android:ac375d9aed8c5740c13702",
+        "android_client_info": {
+          "package_name": "com.bersamadapa.recylefood"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDseY8-2LhX2hubeaSufpUy5Dzu-2XD4vk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
