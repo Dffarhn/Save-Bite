@@ -49,6 +49,8 @@ class MysteryBoxViewModel(private val mysteryBoxRepository: MysteryBoxRepository
         }
     }
 
+
+
     fun updateFilter(filter: MysteryBoxFilter) {
         _filterState.value = filter
     }

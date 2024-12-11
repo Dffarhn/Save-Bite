@@ -12,6 +12,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.bersamadapa.recylefood.ui.screen.CartScreen
 import com.bersamadapa.recylefood.ui.screen.DashboardScreen
 import com.bersamadapa.recylefood.ui.screen.EditProfileScreen
 import com.bersamadapa.recylefood.ui.screen.LoginScreen
@@ -22,6 +23,7 @@ import com.bersamadapa.recylefood.ui.screen.RegisterScreen
 import com.bersamadapa.recylefood.ui.screen.RestaurantDetailScreen
 import com.bersamadapa.recylefood.ui.screen.SearchWithButtonScreen
 import com.bersamadapa.recylefood.ui.screen.SearchWithStringScreen
+import com.bersamadapa.recylefood.ui.screen.VoucherScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -31,19 +33,27 @@ sealed class Screen(val route: String) {
     object DashboardSearchString : Screen("dashboard/search/{selectedSearchString}")
     object MysteryBoxScreen : Screen("mysteryBox/{mysteryBoxId}")
     object OrderHistoryScreen : Screen("orderHistory")
+    object CartScreen : Screen("cart")
+    object VoucherScreen : Screen("voucher")
     object Profile : Screen("profile")
     object RestaurantDetail : Screen("restaurant_detail/{restaurantId}") // updated route to include parameter
     object EditProfile : Screen("edit_profile/{userId}")
 }
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun AppNavGraph(navController: NavHostController) {
+fun AppNavGraph(navController: NavHostController,userId:String?) {
     NavHost(
         navController = navController,
-        startDestination = Screen.OrderHistoryScreen.route,
+        startDestination = if (userId.isNullOrEmpty())  Screen.Login.route else Screen.Dashboard.route,
     ) {
         composable(Screen.Login.route) {
             LoginScreen(navController)
+        }
+        composable(Screen.CartScreen.route) {
+            CartScreen(navController)
+        }
+        composable(Screen.VoucherScreen.route) {
+            VoucherScreen(navController)
         }
 
         composable(Screen.OrderHistoryScreen.route){

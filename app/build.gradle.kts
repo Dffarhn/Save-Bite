@@ -81,6 +81,10 @@ dependencies {
     implementation (libs.com.journeyapps.zxing.android.embedded)
 
 
+    implementation (libs.uikit)
+
+
+
 
 
 

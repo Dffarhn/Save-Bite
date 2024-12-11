@@ -12,23 +12,32 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.bersamadapa.recylefood.data.datastore.DataStoreManager
 import com.bersamadapa.recylefood.ui.navigation.AppNavGraph
+import com.bersamadapa.recylefood.ui.navigation.Screen
+import com.bersamadapa.recylefood.ui.screen.LoadingScreen
 import com.bersamadapa.recylefood.ui.theme.RecyleFoodTheme
 import com.bersamadapa.recylefood.utils.LocationHelper
 import com.bersamadapa.recylefood.utils.QrScannerHelper
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var navController: NavController
     private lateinit var locationHelper: LocationHelper
     private var locationPermissionGranted = false
+    private lateinit var dataStoreManager: DataStoreManager
 
     // Register for permission result
     private val requestPermissionLauncher =
@@ -44,20 +53,37 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            RecyleFoodTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    // Initialize the navController here so it is accessible globally
-                    navController = rememberNavController()
+        dataStoreManager = DataStoreManager(this)
+            setContent {
+                RecyleFoodTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        navController = rememberNavController()
 
-                    // Pass the navController to the AppNavGraph
-                    AppNavGraph(navController = navController as NavHostController)
+                        // Loading state to wait until the userId is fetched
+                        val isUserChecked = remember { mutableStateOf(false) }
+                        val userId = remember { mutableStateOf<String?>(null) }
+
+                        // Check user login status
+                        LaunchedEffect(Unit) {
+                            dataStoreManager.userId.collect { id ->
+                                userId.value = id
+                                isUserChecked.value = true
+                            }
+                        }
+
+                        // Only show navigation after userId is checked
+                        if (isUserChecked.value) {
+                            AppNavGraph(navController = navController as NavHostController, userId = userId.value)
+                        } else {
+                            // Show a loading screen or just a blank screen while checking
+                            LoadingScreen()
+                        }
+                    }
                 }
             }
-        }
 
         // Initialize the LocationHelper and FusedLocationProviderClient
         locationHelper = LocationHelper(this)
@@ -74,8 +100,6 @@ class MainActivity : ComponentActivity() {
             requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
-
-
 
     // Function to launch the QR scanner
     fun launchQrScanner() {

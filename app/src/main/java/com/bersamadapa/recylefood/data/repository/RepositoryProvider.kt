@@ -28,4 +28,9 @@ object RepositoryProvider {
     val userRepository: UserRepository by lazy {
         UserRepository(firestoreInstance, apiService)
     }
+
+
+    val orderRepository: OrderRepository by lazy {
+        OrderRepository(firestoreInstance, apiService)
+    }
 }

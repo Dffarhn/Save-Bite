@@ -32,16 +32,19 @@ fun NavItem(
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        val iconSize = 24.dp // Define a consistent size for icons
         when (icon) {
             is ImageVector -> Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (isSelected) Color(0xFFFDB623) else Color.White
+                tint = if (isSelected) Color(0xFFFDB623) else Color.White,
+                modifier = Modifier.size(iconSize)
             )
             is Painter -> Icon(
                 painter = icon,
                 contentDescription = label,
-                tint = if (isSelected) Color(0xFFFDB623)  else Color.White
+                tint = if (isSelected) Color(0xFFFDB623) else Color.White,
+                modifier = Modifier.size(iconSize)
             )
         }
         Text(

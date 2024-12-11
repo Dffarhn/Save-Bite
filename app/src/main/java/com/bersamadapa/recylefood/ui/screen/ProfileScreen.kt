@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,9 +27,11 @@ import com.bersamadapa.recylefood.data.datastore.DataStoreManager
 import com.bersamadapa.recylefood.data.repository.RepositoryProvider
 import com.bersamadapa.recylefood.ui.component.bottomBar.BottomNavBar
 import com.bersamadapa.recylefood.ui.component.profile.ProfileMenuItem
+import com.bersamadapa.recylefood.ui.navigation.Screen
 import com.bersamadapa.recylefood.viewmodel.UserDataState
 import com.bersamadapa.recylefood.viewmodel.UserViewModel
 import com.bersamadapa.recylefood.viewmodel.ViewModelFactory
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
@@ -43,6 +47,9 @@ fun ProfileScreen(
     if (userDataState is UserDataState.Idle && userId?.isNotEmpty() == true) {
         userId?.let { viewModel.fetchUserById(it) }
     }
+
+    val coroutineScope = rememberCoroutineScope() // To launch a coroutine
+
 
     Box(
         modifier = Modifier
@@ -145,10 +152,22 @@ fun ProfileScreen(
                         icon = R.drawable.ic_promo,
                         title = "Promo",
                         subtitle = "",
-                        onClick = { /* Navigate to promo screen */ }
+                        onClick = { navController.navigate(Screen.VoucherScreen.route) }
                     )
 
                     HorizontalDivider()
+
+                    ProfileMenuItem(
+                        icon = R.drawable.ic_promo,
+                        title = "Logout",
+                        subtitle = "",
+                        onClick = {
+                            coroutineScope.launch {
+                                dataStoreManager.clearData() // Clear user data from DataStore
+                                navController.navigate(Screen.Login.route) // Navigate to the login screen
+                            }
+                        }
+                    )
                 }
 
                 is UserDataState.Error -> {

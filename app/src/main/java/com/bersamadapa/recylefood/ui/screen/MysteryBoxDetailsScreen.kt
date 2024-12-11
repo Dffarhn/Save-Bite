@@ -1,4 +1,6 @@
 package com.bersamadapa.recylefood.ui.screen
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -25,13 +27,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.bersamadapa.recylefood.PaymentActivity
 import com.bersamadapa.recylefood.R
+import com.bersamadapa.recylefood.data.datastore.DataStoreManager
+import com.bersamadapa.recylefood.data.model.OrderRequest
 import com.bersamadapa.recylefood.data.repository.RepositoryProvider
 import com.bersamadapa.recylefood.ui.component.dashboard.FoodMysteryCard
 import com.bersamadapa.recylefood.utils.LocationHelper
 import com.bersamadapa.recylefood.viewmodel.MysteryBoxDetailState
 import com.bersamadapa.recylefood.viewmodel.MysteryBoxListState
 import com.bersamadapa.recylefood.viewmodel.MysteryBoxViewModel
+import com.bersamadapa.recylefood.viewmodel.OrderState
+import com.bersamadapa.recylefood.viewmodel.OrderViewModel
 import com.bersamadapa.recylefood.viewmodel.ViewModelFactory
 import java.text.NumberFormat
 import java.util.Locale
@@ -47,11 +54,27 @@ fun MysteryBoxDetailScreen(
     val factoryMysteryBox = ViewModelFactory { MysteryBoxViewModel(mysteryBoxRepository) }
     val viewModelMysteryBox: MysteryBoxViewModel = viewModel(factory = factoryMysteryBox)
 
+
+
+
+    val orderRepository = RepositoryProvider.orderRepository
+    val factoryOrder = ViewModelFactory { OrderViewModel(orderRepository) }
+    val viewModelOrder: OrderViewModel = viewModel(factory = factoryOrder)
+
+    val orderRequest = OrderRequest(mysteryBox = listOf(idMysterBox))
+
+
+    // Observe the state of order creation (you can use this to show loading, success, or error)
+    val createOrderState by viewModelOrder.createOrderState.collectAsState()
+
     // Collect the current state of restaurant data
     // Observe mystery box state
     val mysteryBoxState by viewModelMysteryBox.mysteryBoxDetailState.collectAsState()
 
     val context = LocalContext.current
+
+    val dataStoreManager = DataStoreManager(context)
+    val userId by dataStoreManager.userId.collectAsState("")
 
 
 
@@ -63,6 +86,13 @@ fun MysteryBoxDetailScreen(
                 viewModelMysteryBox.fetchMysteryBoxDetails(idMysterBox,location)
             }
 
+        }
+    }
+
+    LaunchedEffect(createOrderState) {
+        if (createOrderState is OrderState.Success) {
+            val token = (createOrderState as OrderState.Success).orderResponse.token_midtrans.token
+            startPaymentActivity(context, token)
         }
     }
 
@@ -195,7 +225,12 @@ fun MysteryBoxDetailScreen(
                     horizontalAlignment = Alignment.CenterHorizontally // Center the buttons
                 ) {
                     Button(
-                        onClick = { /* Add logic here */ },
+                        onClick = {
+                            val user = userId // Use the appropriate user ID here
+                            if (user != null) {
+                                viewModelOrder.createOrder(user, orderRequest)
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorResource(id = R.color.brown) // Use saved color
                         ),
@@ -242,4 +277,11 @@ private fun formatDistance(distance: Float?): String {
         // Format as kilometers with one decimal place
         String.format("%.1f km", distance / 1000)
     }
+}
+
+private fun startPaymentActivity(context: Context, token: String) {
+    val intent = Intent(context, PaymentActivity::class.java).apply {
+        putExtra("PAYMENT_TOKEN", token)
+    }
+    context.startActivity(intent)
 }

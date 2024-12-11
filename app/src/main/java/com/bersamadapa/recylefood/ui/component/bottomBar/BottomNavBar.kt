@@ -47,13 +47,13 @@ fun BottomNavBar(navController: NavController, selectedTab: String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     NavItem(
-                        icon = Icons.Filled.Home,
                         label = "Home",
+                        icon = painterResource(id = R.drawable.ic_home2),
                         isSelected = selectedTab == "Home",
                         onClick = { navController.navigate(Screen.Dashboard.route) }
                     )
                     NavItem(
-                        icon = Icons.Filled.ShoppingCart,
+                        icon = painterResource(id = R.drawable.order),
                         label = "Order",
                         isSelected = selectedTab == "OrderHistory",
                         onClick = { navController.navigate("orderHistory") }
@@ -61,10 +61,10 @@ fun BottomNavBar(navController: NavController, selectedTab: String) {
                     Spacer(modifier = Modifier.weight(1f)) // Space for FAB
 
                     NavItem(
-                        icon = painterResource(id = R.drawable.ic_history),
-                        label = "History",
-                        isSelected = selectedTab == "History",
-                        onClick = { navController.navigate("history") }
+                        icon = painterResource(id = R.drawable.ic_cart),
+                        label = "Cart",
+                        isSelected = selectedTab == "Cart",
+                        onClick = { navController.navigate(Screen.CartScreen.route) }
                     )
                     NavItem(
                         icon = Icons.Filled.Person,
