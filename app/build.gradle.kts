@@ -80,8 +80,10 @@ dependencies {
 
     implementation (libs.com.journeyapps.zxing.android.embedded)
 
+    implementation("com.midtrans:uikit:2.3.0-SANDBOX")
 
-    implementation (libs.uikit)
+// https://mvnrepository.com/artifact/io.socket/socket.io-client
+    implementation("io.socket:socket.io-client:2.1.1")
 
 
 

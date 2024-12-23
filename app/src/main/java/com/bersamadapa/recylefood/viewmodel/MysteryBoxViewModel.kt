@@ -38,7 +38,10 @@ class MysteryBoxViewModel(private val mysteryBoxRepository: MysteryBoxRepository
                         MysteryBoxFilter.Nearest -> mysteryBoxes.sortedBy { it.restaurantData?.distance }
                         MysteryBoxFilter.BestRated -> mysteryBoxes.sortedByDescending { it.restaurantData?.rating }
                         MysteryBoxFilter.Cheapest -> mysteryBoxes.sortedBy { it.price }
+                        MysteryBoxFilter.BestSeller -> mysteryBoxes.sortedBy { it.restaurantData?.selling }
                         MysteryBoxFilter.New -> mysteryBoxes.sortedByDescending { it.createdAt }
+
+
                     }
                     _mysteryBoxListState.value = MysteryBoxListState.Success(filteredMysteryBoxes)
                 },
@@ -96,5 +99,5 @@ sealed class MysteryBoxDetailState {
 }
 
 enum class MysteryBoxFilter {
-    Nearest, BestRated, Cheapest, New
+    Nearest, BestRated, Cheapest, BestSeller, New
 }

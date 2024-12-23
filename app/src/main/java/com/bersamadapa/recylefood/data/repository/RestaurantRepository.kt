@@ -4,8 +4,10 @@ import android.location.Location
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import android.util.Log
+import com.bersamadapa.recylefood.data.model.MysteryBox
 import com.bersamadapa.recylefood.data.model.Product
 import com.bersamadapa.recylefood.data.model.Restaurant
+import com.bersamadapa.recylefood.data.repository.MysteryBoxRepository.Companion
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
@@ -60,6 +62,63 @@ class RestaurantRepository(private val firestore: FirebaseFirestore) {
                 Log.w(TAG, message)
                 return Result.failure(Exception(message))
             }
+
+            val snapshot = firestore.collection("mysterybox").whereEqualTo("restaurant","/restaurants/$idRestaurant").get().await()
+            Log.d("MysteryBox Resto", "Fetched ${snapshot.documents.size} mystery boxes from Firestore.")
+
+            // Map each document to a MysteryBox object
+// Map each document to a MysteryBox object
+            val mysteryBoxes = snapshot.documents.mapNotNull { document ->
+                document.toObject(MysteryBox::class.java)?.apply {
+                    id = document.id
+                    Log.d("MysteryBox Resto", "Mapped mystery box with ID: $id" + document.data.toString())
+
+                    // Manually fetch the restaurant details if the restaurant ID/path is present
+                    restaurantData = document.getString("restaurant")?.let { restaurantPath ->
+                        val restaurantId = restaurantPath.split("/").last()
+                        Log.d("MysteryBox Resto", "Fetching restaurant with ID: $restaurantId for mystery box: $id")
+
+                        val restaurantDocument = firestore.collection("restaurants")
+                            .document(restaurantId)
+                            .get()
+                            .await()
+                        restaurantDocument.toObject(Restaurant::class.java)?.apply {
+                            this@apply.id = restaurantDocument.id
+                            Log.d("MysteryBox Resto", "Mapped restaurant with ID: $id for mystery box: $id")
+
+
+                        }
+
+                    }
+
+
+                    // Fetch product details for the product IDs in the array under the specific restaurant
+                    val productIds = document.get("products") as? List<*> // Ensure it's a list of product IDs
+                    if (!productIds.isNullOrEmpty()) {
+                        Log.d("MysteryBox Resto", "Fetching products for mystery box: $id, Product IDs: $productIds")
+                        val productDocuments = productIds.mapNotNull { productId ->
+                            val productIdString = productId.toString().split("/").last()
+
+
+                            val productRef = firestore.collection("restaurants")
+                                .document(restaurantData?.id ?: "")
+                                .collection("products")
+                                .document(productIdString)
+                            productRef.get().await()
+                        }
+
+                        // Map the product documents to Product objects
+                        productsData = productDocuments.mapNotNull { productDoc ->
+                            productDoc.toObject(Product::class.java)?.apply {
+                                Log.d("MysteryBox Resto", "Mapped product with ID: $id for mystery box: $id")
+                            }
+                        }
+                    }
+                }
+            }
+
+            restaurant.mysteryBox = mysteryBoxes
+
 
             Log.d("isi restaurant", restaurant.toString())
 

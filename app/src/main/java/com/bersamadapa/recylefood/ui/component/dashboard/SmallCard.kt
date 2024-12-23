@@ -49,10 +49,11 @@ fun SmallCard(
         Image(
             painter = painterResource(id = picture), // Replace with your profile image
             contentDescription = "Menu Picture",
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
             modifier = Modifier
                 .size(50.dp)
                 .clip(CircleShape) // Makes the image circular
-                .background(Color.Gray) // Background color for the profile picture
+                .background(Color.Transparent) // Background color for the profile picture
         )
 
         Spacer(modifier = Modifier.height(5.dp))

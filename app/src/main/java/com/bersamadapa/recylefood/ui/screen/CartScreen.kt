@@ -6,28 +6,58 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.bersamadapa.recylefood.R
+import com.bersamadapa.recylefood.data.datastore.DataStoreManager
+import com.bersamadapa.recylefood.data.model.MysteryBox
+import com.bersamadapa.recylefood.data.repository.RepositoryProvider
+import com.bersamadapa.recylefood.viewmodel.CartViewModel
+import com.bersamadapa.recylefood.viewmodel.OrderViewModel
+import com.bersamadapa.recylefood.viewmodel.ViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
     navController: NavController
 ) {
-    val cartItems = listOf(
-        CartItemData("Ayam Pak Gembus", "Mystery Box Paket 1", "Rp20.000", "Jalan Kaliurang KM 12"),
-        CartItemData("Parsley", "Mystery Box Roti Kering", "Rp40.000", "Jalan Kaliurang KM 13"),
-        CartItemData("Parsley", "Mystery Box Roti Tawar", "Rp20.000", "Jalan Kaliurang KM 13")
-    )
+    val cartRepository = RepositoryProvider.cartRepository
+    val factoryCart = ViewModelFactory { CartViewModel(cartRepository) }
+    val viewModelCart: CartViewModel = viewModel(factory = factoryCart)
+
+    val listOrderState by viewModelCart.cartItems.collectAsState()
+    val dataStoreManager = DataStoreManager(LocalContext.current)
+    val userId by dataStoreManager.userId.collectAsState("")
+
+    // State for tracking checked items, selected restaurant, and total price
+    val checkedItems = remember { mutableStateMapOf<String, Boolean>() }
+    val selectedRestaurant = remember { mutableStateOf<String?>(null) }
+    val selectedItemIds = remember { mutableStateOf(setOf<String>()) }
+    val totalPrice = remember { mutableStateOf(0.0) }
+
+    // Fetch cart items when userId changes
+    LaunchedEffect(userId) {
+        if (userId?.isNotEmpty() == true) {
+            userId?.let { viewModelCart.fetchCartItems(it) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -44,7 +74,7 @@ fun CartScreen(
             )
         },
         bottomBar = {
-            BottomCartBar()
+            BottomCartBar(totalPrice.value)
         }
     ) { innerPadding ->
         Column(
@@ -53,22 +83,67 @@ fun CartScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            var currentRestaurant = ""
-            cartItems.forEachIndexed { index, cartItem ->
-                val isFirstItemOfRestaurant = cartItem.restaurantName != currentRestaurant
-                if (isFirstItemOfRestaurant) {
-                    if (index != 0) {
-                        HorizontalDivider(thickness = 1.dp, color = Color.Gray)
-                    }
-                    currentRestaurant = cartItem.restaurantName
+            if (viewModelCart.isLoading.collectAsState().value) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            } else {
+                val errorMessage by viewModelCart.errorMessage.collectAsState()
+                errorMessage?.let {
+                    Text(
+                        text = it,
+                        color = Color.Red,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
                 }
 
-                CartItem(
-                    restaurantName = if (isFirstItemOfRestaurant) cartItem.restaurantName else null,
-                    itemName = cartItem.itemName,
-                    price = cartItem.price,
-                    location = cartItem.location
-                )
+                // Display cart items
+                var currentRestaurant = ""
+                listOrderState.forEachIndexed { index, cartItem ->
+                    val isFirstItemOfRestaurant = cartItem.restaurant?.name != currentRestaurant
+                    if (isFirstItemOfRestaurant) {
+                        if (index != 0) {
+                            HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+                        }
+                        currentRestaurant = cartItem.restaurant?.name.orEmpty()
+                    }
+
+                    CartItem(
+                        restaurantName = if (isFirstItemOfRestaurant) cartItem.restaurant?.name else null,
+                        mysteryBox = cartItem.mysteryBoxData ?: emptyList(),
+                        quantity = cartItem.quantity,
+                        checkedItems = checkedItems,
+                        selectedRestaurant = selectedRestaurant,
+                        onCheckChange = { itemId, isChecked, price ->
+                            checkedItems[itemId] = isChecked
+                            totalPrice.value = if (isChecked) {
+                                totalPrice.value + price
+                            } else {
+                                totalPrice.value - price
+                            }
+
+                            // Update selectedItemIds state
+                            selectedItemIds.value = if (isChecked) {
+                                selectedItemIds.value + itemId
+                            } else {
+                                selectedItemIds.value - itemId
+                            }
+                        },
+                        onRestaurantCheckChange = { restaurantName, restaurantItems, isChecked ->
+                            // Only allow selecting one restaurant at a time
+                            selectedRestaurant.value = if (isChecked) restaurantName else null
+                            // Uncheck items from other restaurants
+                            checkedItems.clear()
+                            totalPrice.value = 0.0
+
+                            // Update selected items for this restaurant
+                            restaurantItems.forEach { item ->
+                                checkedItems[item.id] = isChecked
+                                if (isChecked) totalPrice.value += item.price?.toDouble() ?: 0.0
+                            }
+                        }
+                    )
+                }
             }
         }
     }
@@ -77,26 +152,30 @@ fun CartScreen(
 @Composable
 fun CartItem(
     restaurantName: String?,
-    itemName: String,
-    price: String,
-    location: String
+    mysteryBox: List<MysteryBox>,
+    quantity: Int,
+    checkedItems: MutableMap<String, Boolean>,
+    selectedRestaurant: MutableState<String?>,
+    onCheckChange: (String, Boolean, Int) -> Unit,
+    onRestaurantCheckChange: (String, List<MysteryBox>, Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
-        // Restaurant Name Section
+        // Restaurant Name Section with checkbox
         restaurantName?.let {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
                 Checkbox(
-                    checked = false,
-                    onCheckedChange = { /* Handle checkbox state */ }
+                    checked = selectedRestaurant.value == it,
+                    onCheckedChange = { isChecked ->
+                        onRestaurantCheckChange(it, mysteryBox, isChecked)
+                    }
                 )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = it,
                     fontSize = 16.sp,
@@ -106,64 +185,37 @@ fun CartItem(
             }
         }
 
-        // Item Section
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = false,
-                onCheckedChange = { /* Handle checkbox state */ }
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Image(
-                painter = painterResource(id = R.drawable.mystery_box),
-                contentDescription = "Item Image",
-                modifier = Modifier.size(64.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = itemName,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colorResource(id = R.color.brown)
-                )
-                Text(
-                    text = price,
-                    fontSize = 14.sp,
-                    color = colorResource(id = R.color.brown)
-                )
-                Text(
-                    text = location,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-
-            // Item Count Section
+        // Display MysteryBox items with checkboxes
+        mysteryBox.forEach { box ->
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { /* Decrease quantity */ }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.minus),
-                        contentDescription = "Decrease",
-                        tint = colorResource(id = R.color.brown),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                Text(
-                    text = "1", // Replace "1" with dynamic quantity if needed
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorResource(id = R.color.brown)
+                Checkbox(
+                    checked = checkedItems[box.id] == true,
+                    onCheckedChange = { isChecked ->
+                        box.price?.let { onCheckChange(box.id, isChecked, it) }
+                    }
                 )
-                IconButton(onClick = { /* Increase quantity */ }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_plus),
-                        contentDescription = "Increase",
-                        tint = colorResource(id = R.color.brown)
+                Image(
+                    painter = painterResource(id = R.drawable.mystery_box),
+                    contentDescription = "Mystery Box Image",
+                    modifier = Modifier.size(64.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    box.name?.let {
+                        Text(
+                            text = it,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = colorResource(id = R.color.brown)
+                        )
+                    }
+                    Text(
+                        text = "Rp${box.price}",
+                        fontSize = 14.sp,
+                        color = colorResource(id = R.color.brown)
                     )
                 }
             }
@@ -171,103 +223,49 @@ fun CartItem(
     }
 }
 
-data class CartItemData(
-    val restaurantName: String,
-    val itemName: String,
-    val price: String,
-    val location: String
-)
-
-
 @Composable
-fun BottomCartBar() {
+fun BottomCartBar(totalPrice: Double) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(color = colorResource(id = R.color.brown))
-            .padding(top = 8.dp)
+            .padding(16.dp)
     ) {
-        // Top Section: Voucher
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_voucher),
-                contentDescription = "Voucher",
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Voucher SaveBite",
                 fontSize = 14.sp,
-                color = Color.White,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
-            Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "Masukkan atau pilih voucher mu",
                 fontSize = 12.sp,
-                color = Color.Gray,
-                fontWeight = FontWeight.Light
+                color = Color.Gray
             )
         }
-
         Spacer(modifier = Modifier.height(8.dp))
-
-        // Bottom Section: Total Hemat and Payment Button
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_money),
-                contentDescription = "Voucher",
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
+            Text(
+                text = "Total: Rp$totalPrice",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            // Total Hemat Section
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Total",
-                        fontSize = 14.sp,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Rp0",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-            }
-            // Bayar Button Section
             Button(
-                onClick = { /* Handle payment */ },
-                colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.cream)),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier
-                    .height(50.dp)
-                    .width(140.dp)
+                onClick = { /* Handle Payment */ },
+                colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.cream))
             ) {
-                Text(text = "Bayar (0)", color = Color.Black, fontSize = 14.sp)
+                Text(text = "Bayar", color = Color.Black)
             }
         }
     }
 }
-
-

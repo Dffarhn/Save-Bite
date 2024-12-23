@@ -13,5 +13,7 @@ data class Restaurant(
     var rating: Double? = 0.0,
     var address: String = "",
     var products: List<Product>? = emptyList(), // Products will be populated dynamically
-    var distance: Float? = null
+    var distance: Float? = null,
+    var mysteryBox: List<MysteryBox>?= null,
+    var selling: Int? = 0,
 )

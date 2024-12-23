@@ -7,7 +7,8 @@ data class User(
     var username: String? = "", // Add default value
     var noHandphone: String? = "", // Add default value
     var password: String? = "", // Add default value
-    var email: String? = "" // Add default value
+    var email: String? = "", // Add default value
+    var points:Int? = 0, // Add default value
 )
 
 data class PictureData(

@@ -33,4 +33,13 @@ object RepositoryProvider {
     val orderRepository: OrderRepository by lazy {
         OrderRepository(firestoreInstance, apiService)
     }
+
+    val voucherRepository: VoucherRepository by lazy {
+        VoucherRepository(firestoreInstance)
+    }
+
+    val cartRepository:CartRepository by lazy {
+        CartRepository(firestoreInstance)
+
+    }
 }

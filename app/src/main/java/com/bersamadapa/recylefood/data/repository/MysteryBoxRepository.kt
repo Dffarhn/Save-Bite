@@ -138,7 +138,7 @@ class MysteryBoxRepository(private val firestore: FirebaseFirestore) {
                         null
                     } else {
                         restaurantDocument.toObject(Restaurant::class.java)?.apply {
-                            id = restaurantDocument.id
+                            this@apply.id = restaurantDocument.id
                             Log.d(TAG, "Mapped restaurant with ID: $id for mystery box: $id")
                         }
                     }
@@ -174,7 +174,6 @@ class MysteryBoxRepository(private val firestore: FirebaseFirestore) {
 
                     productsData = productDocuments.mapNotNull { productDoc ->
                         productDoc.toObject(Product::class.java)?.apply {
-                            id = productDoc.id
                             Log.d(TAG, "Mapped product with ID: $id for mystery box: $id")
                         }
                     }

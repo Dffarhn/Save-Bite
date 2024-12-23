@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +37,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.bersamadapa.recylefood.R
+import com.bersamadapa.recylefood.data.datastore.DataStoreManager
 import com.bersamadapa.recylefood.data.repository.RepositoryProvider
 import com.bersamadapa.recylefood.ui.component.CustomSearchField
 import com.bersamadapa.recylefood.ui.component.dashboard.RestaurantItem
@@ -43,9 +45,11 @@ import com.bersamadapa.recylefood.ui.component.bottomBar.BottomNavBar
 import com.bersamadapa.recylefood.ui.component.dashboard.BannerData
 import com.bersamadapa.recylefood.ui.component.dashboard.CarouselBannerAutoSlide
 import com.bersamadapa.recylefood.ui.component.dashboard.DashboardBanner
+import com.bersamadapa.recylefood.ui.component.dashboard.FloatingButton
 import com.bersamadapa.recylefood.ui.component.dashboard.SmallCard
 import com.bersamadapa.recylefood.ui.component.dashboard.FoodMysteryCard
 import com.bersamadapa.recylefood.ui.component.dashboard.RestaurantButtonRow
+import com.bersamadapa.recylefood.ui.component.profile.ProfileMenuItem
 import com.bersamadapa.recylefood.ui.navigation.Screen
 import com.bersamadapa.recylefood.utils.LocationHelper
 import com.bersamadapa.recylefood.viewmodel.MysteryBoxFilter
@@ -53,7 +57,10 @@ import com.bersamadapa.recylefood.viewmodel.MysteryBoxListState
 import com.bersamadapa.recylefood.viewmodel.MysteryBoxViewModel
 import com.bersamadapa.recylefood.viewmodel.RestaurantDataState
 import com.bersamadapa.recylefood.viewmodel.RestaurantViewModel
+import com.bersamadapa.recylefood.viewmodel.UserDataState
+import com.bersamadapa.recylefood.viewmodel.UserViewModel
 import com.bersamadapa.recylefood.viewmodel.ViewModelFactory
+import kotlinx.coroutines.launch
 
 @Composable
 fun DashboardScreen(navController: NavController) {
@@ -74,10 +81,22 @@ fun DashboardScreen(navController: NavController) {
 
     val selectedTab = "Home"
 
+    val userRepository = RepositoryProvider.userRepository
+    val factoryUser = ViewModelFactory { UserViewModel(userRepository) }
+    val viewModelUser: UserViewModel = viewModel(factory = factoryUser)
+    val userDataState by viewModelUser.userDataState.collectAsState()
+    val dataStoreManager = DataStoreManager(LocalContext.current)
+    val userId by dataStoreManager.userId.collectAsState("")
+
+    if (userDataState is UserDataState.Idle && userId?.isNotEmpty() == true) {
+        userId?.let { viewModelUser.fetchUserById(it) }
+    }
+
     // Trigger the data fetching only when the state is Id
 
     val banners = listOf(
         BannerData("Welcome to Recycle Food", "Save food, save the planet!", R.drawable.banner_dashboard),
+        BannerData("Welcome to Recycle Food", "Save food, save the planet!", R.drawable.banner2),
         BannerData("Get the Best Deals", "Discounts on every meal!", R.drawable.baked_goods_2),
         BannerData("Support Sustainability", "Join us in reducing waste!", R.drawable.baked_goods_3)
     )
@@ -178,10 +197,55 @@ fun DashboardScreen(navController: NavController) {
                         CarouselBannerAutoSlide(banners)
                     }
 
-
-
-
                     Spacer(modifier = Modifier.height(16.dp)) // Add spacing below the banner
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+
+                    ){
+
+                        when (val state = userDataState) {
+                            is UserDataState.Loading -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+
+                            is UserDataState.Success -> {
+                                val user = state.user
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    ) {
+
+                                    user.points?.let { FloatingButton(it, onLeaderboardClick = {navController.navigate(Screen.LeaderBoardScreen.route)}) }
+                                }
+
+
+                            }
+
+                            is UserDataState.Error -> {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(text = "Error: ${state.message}")
+                                }
+                            }
+
+                            else -> Unit
+                        }
+                    }
+
+
+
+
                 }
                 // Small Cards (Terdekat, Termurah, Terbaik)
                 item {
@@ -206,7 +270,7 @@ fun DashboardScreen(navController: NavController) {
 
                         SmallCard(
                             title = "Resto Terdekat",
-                            picture = R.drawable.baked_goods_1,
+                            picture = R.drawable.loc,
                             onClick = {
                                 // Handle click for "Resto Terdekat"
                                 navController.navigate("dashboard/Resto Terdekat")
@@ -215,7 +279,7 @@ fun DashboardScreen(navController: NavController) {
 
                         SmallCard(
                             title = "Resto Terbaik",
-                            picture = R.drawable.baked_goods_2,
+                            picture = R.drawable.ic_restaurant,
                             onClick = {
                                 // Handle click for "Resto Terbaik"
                                 navController.navigate("dashboard/Resto Terbaik")
@@ -224,7 +288,7 @@ fun DashboardScreen(navController: NavController) {
 
                         SmallCard(
                             title = "The Best Seller",
-                            picture = R.drawable.baked_goods_3,
+                            picture = R.drawable.ic_top_button,
                             onClick = {
                                 // Handle click for "The Best Seller"
                                 navController.navigate("dashboard/The Best Seller")
@@ -233,7 +297,7 @@ fun DashboardScreen(navController: NavController) {
 
                         SmallCard(
                             title = "Mystery Murah",
-                            picture = R.drawable.baked_goods_3,
+                            picture = R.drawable.ic_voucher,
                             onClick = {
                                 // Handle click for "Mystery Murah"
                                 navController.navigate("dashboard/Mystery Murah")
@@ -336,7 +400,7 @@ fun DashboardScreen(navController: NavController) {
 
                         RestaurantButtonRow(
                             modifier = Modifier.padding(start = 0.dp, end = 0.dp),
-                            buttons = listOf("Terdekat", "Terbaik", "Termewah", "Tersolid"), // Pass button labels
+                            buttons = listOf("Terdekat", "Terbaik", "Termewah", "Termurah"), // Pass button labels
                             selectedButton = selectedButton, // Pass the current selected button
                             onButtonClick = { selected ->
                                 selectedButton = selected // Update selected button when clicked
@@ -381,6 +445,7 @@ fun DashboardScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
+                .padding(top = 10.dp)
         ) {
             BottomNavBar(navController = navController, selectedTab = selectedTab)
         }

@@ -79,7 +79,6 @@ firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore
 logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "loggingInterceptor" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
-uikit = { module = "com.midtrans:uikit", version.ref = "uikit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -52,6 +52,8 @@ fun BottomNavBar(navController: NavController, selectedTab: String) {
                         isSelected = selectedTab == "Home",
                         onClick = { navController.navigate(Screen.Dashboard.route) }
                     )
+
+                    Spacer(modifier = Modifier.weight(0.1f)) // Space for FAB
                     NavItem(
                         icon = painterResource(id = R.drawable.order),
                         label = "Order",
@@ -66,6 +68,8 @@ fun BottomNavBar(navController: NavController, selectedTab: String) {
                         isSelected = selectedTab == "Cart",
                         onClick = { navController.navigate(Screen.CartScreen.route) }
                     )
+
+                    Spacer(modifier = Modifier.weight(0.1f)) // Space for FAB
                     NavItem(
                         icon = Icons.Filled.Person,
                         label = "Profile",

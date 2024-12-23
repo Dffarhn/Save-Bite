@@ -61,7 +61,7 @@ fun CarouselBannerAutoSlide(banners: List<BannerData>) {
 fun DashboardBanner(title: String, subtitle: String, @DrawableRes imageRes: Int) {
     Box(
         modifier = Modifier
-            .width(350.dp)
+            .width(380.dp)
             .height(180.dp) // Adjust height as needed
     ) {
         // Background Image

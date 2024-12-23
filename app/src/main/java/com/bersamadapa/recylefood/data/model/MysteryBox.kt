@@ -1,6 +1,8 @@
 package com.bersamadapa.recylefood.data.model
 
 import com.google.firebase.Timestamp
+import java.io.Serializable
+
 
 data class MysteryBox (
     var id: String = "", // Document ID
@@ -11,5 +13,5 @@ data class MysteryBox (
     var products: List<String>? = null,
     var productsData: List<Product>? = null,
     var createdAt: Timestamp? = null
-)
+): Serializable
 

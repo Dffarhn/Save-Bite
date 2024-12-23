@@ -63,6 +63,70 @@ class RestaurantViewModel(private val restaurantRepository: RestaurantRepository
                         )
                     }
                 }
+                "Termewah" -> {
+
+                    userLocation?.let { location ->
+                        val result = restaurantRepository.getRestaurantsWithDistance(location)
+                        result.fold(
+                            onSuccess = { restaurants ->
+
+                                val filteredAndSortedRestaurants = restaurants
+                                    .sortedByDescending { restaurant ->
+                                        restaurant.products?.sumOf { it.price } // Sort by sum of product prices
+                                    }
+
+                                // Update the state with the filtered and sorted list
+                                _restaurantListState.value = RestaurantDataState.Success(filteredAndSortedRestaurants)
+                            },
+                            onFailure = { exception ->
+                                _restaurantListState.value = RestaurantDataState.Error(exception.message ?: "Unknown error")
+                            }
+                        )
+                    }
+                }
+                "Termurah" -> {
+
+                    userLocation?.let { location ->
+                        val result = restaurantRepository.getRestaurantsWithDistance(location)
+                        result.fold(
+                            onSuccess = { restaurants ->
+
+                                val filteredAndSortedRestaurants = restaurants
+                                    .sortedBy { restaurant ->
+                                        restaurant.products?.sumOf { it.price } // Sort by sum of product prices
+                                    }
+
+                                // Update the state with the filtered and sorted list
+                                _restaurantListState.value = RestaurantDataState.Success(filteredAndSortedRestaurants)
+                            },
+                            onFailure = { exception ->
+                                _restaurantListState.value = RestaurantDataState.Error(exception.message ?: "Unknown error")
+                            }
+                        )
+                    }
+                }
+                "Terpopuler" -> {
+
+                    userLocation?.let { location ->
+                        val result = restaurantRepository.getRestaurantsWithDistance(location)
+                        result.fold(
+                            onSuccess = { restaurants ->
+
+                                val filteredAndSortedRestaurants = restaurants
+                                    .sortedByDescending { restaurant ->
+                                        restaurant.selling
+                                    }
+
+                                // Update the state with the filtered and sorted list
+                                _restaurantListState.value = RestaurantDataState.Success(filteredAndSortedRestaurants)
+                            },
+                            onFailure = { exception ->
+                                _restaurantListState.value = RestaurantDataState.Error(exception.message ?: "Unknown error")
+                            }
+                        )
+                    }
+
+                }
                 else -> {
                     // Default state, you can decide if you need a fallback or show all restaurants
                     _restaurantListState.value = RestaurantDataState.Error("Invalid filter selection")

@@ -65,7 +65,8 @@ class AuthRepository(private val firestore: FirebaseFirestore) {
                 "email" to email,
                 "username" to username,
                 "noHandphone" to noHandphone,
-                "password" to hashedPassword // Store the hashed password
+                "password" to hashedPassword, // Store the hashed password
+                "points" to 0,
             )
 
             // Add the user to Firestore

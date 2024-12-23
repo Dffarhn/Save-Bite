@@ -2,6 +2,7 @@ package com.bersamadapa.recylefood.ui.screen
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,16 +31,21 @@ import androidx.navigation.NavController
 import com.bersamadapa.recylefood.PaymentActivity
 import com.bersamadapa.recylefood.R
 import com.bersamadapa.recylefood.data.datastore.DataStoreManager
+import com.bersamadapa.recylefood.data.model.CartRequest
+import com.bersamadapa.recylefood.data.model.MysteryBox
 import com.bersamadapa.recylefood.data.model.OrderRequest
 import com.bersamadapa.recylefood.data.repository.RepositoryProvider
 import com.bersamadapa.recylefood.ui.component.dashboard.FoodMysteryCard
 import com.bersamadapa.recylefood.utils.LocationHelper
+import com.bersamadapa.recylefood.viewmodel.CartViewModel
 import com.bersamadapa.recylefood.viewmodel.MysteryBoxDetailState
 import com.bersamadapa.recylefood.viewmodel.MysteryBoxListState
 import com.bersamadapa.recylefood.viewmodel.MysteryBoxViewModel
 import com.bersamadapa.recylefood.viewmodel.OrderState
 import com.bersamadapa.recylefood.viewmodel.OrderViewModel
 import com.bersamadapa.recylefood.viewmodel.ViewModelFactory
+import com.google.gson.Gson
+import java.net.URLEncoder
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -55,17 +61,11 @@ fun MysteryBoxDetailScreen(
     val viewModelMysteryBox: MysteryBoxViewModel = viewModel(factory = factoryMysteryBox)
 
 
+    val cartRepository = RepositoryProvider.cartRepository // Assume you have a Cart repository
+    val factoryCart = ViewModelFactory { CartViewModel(cartRepository) }
+    val viewModelCart: CartViewModel = viewModel(factory = factoryCart)
 
 
-    val orderRepository = RepositoryProvider.orderRepository
-    val factoryOrder = ViewModelFactory { OrderViewModel(orderRepository) }
-    val viewModelOrder: OrderViewModel = viewModel(factory = factoryOrder)
-
-    val orderRequest = OrderRequest(mysteryBox = listOf(idMysterBox))
-
-
-    // Observe the state of order creation (you can use this to show loading, success, or error)
-    val createOrderState by viewModelOrder.createOrderState.collectAsState()
 
     // Collect the current state of restaurant data
     // Observe mystery box state
@@ -75,6 +75,10 @@ fun MysteryBoxDetailScreen(
 
     val dataStoreManager = DataStoreManager(context)
     val userId by dataStoreManager.userId.collectAsState("")
+
+    var restaurantId:String? = null
+
+    var mysterybox:MysteryBox? = null
 
 
 
@@ -86,13 +90,6 @@ fun MysteryBoxDetailScreen(
                 viewModelMysteryBox.fetchMysteryBoxDetails(idMysterBox,location)
             }
 
-        }
-    }
-
-    LaunchedEffect(createOrderState) {
-        if (createOrderState is OrderState.Success) {
-            val token = (createOrderState as OrderState.Success).orderResponse.token_midtrans.token
-            startPaymentActivity(context, token)
         }
     }
 
@@ -141,6 +138,10 @@ fun MysteryBoxDetailScreen(
                         is MysteryBoxDetailState.Success -> {
                             val mysteryBox = state.mysteryBox
 
+                            restaurantId = mysteryBox.restaurantData?.id
+                            mysterybox = mysteryBox
+
+
                             val formattedPrice = NumberFormat.getCurrencyInstance(Locale("id", "ID")).format(mysteryBox.price?.toDouble())
 
 
@@ -174,7 +175,7 @@ fun MysteryBoxDetailScreen(
                                         tint = Color.Gray
                                     )
                                     Spacer(Modifier.width(10.dp))
-                                    Text("${((((mysteryBox.productsData?.size)?.minus(1).toString())))} paket makanan", fontSize = 14.sp, color = Color.Gray)
+                                    Text("${((((mysteryBox.productsData?.size).toString())))} paket makanan", fontSize = 14.sp, color = Color.Gray)
                                 }
                                 Spacer(Modifier.height(8.dp))
                                 Row(
@@ -226,10 +227,9 @@ fun MysteryBoxDetailScreen(
                 ) {
                     Button(
                         onClick = {
-                            val user = userId // Use the appropriate user ID here
-                            if (user != null) {
-                                viewModelOrder.createOrder(user, orderRequest)
-                            }
+
+                            navController.navigate("payment/${URLEncoder.encode(Gson().toJson(listOf(mysterybox)),"UTF-8") }")
+
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorResource(id = R.color.brown) // Use saved color
@@ -242,12 +242,27 @@ fun MysteryBoxDetailScreen(
                         Text("Bayar", color = Color.White)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = { /* Add logic here */ },
+                    Button(
+                        onClick = {
+                            val user = userId
+                            if (user != null) {
+                                // Create cart request here
+                                val cartRequest = restaurantId?.let {
+                                    CartRequest(mysteryBox = listOf(idMysterBox),
+                                        restaurantId = it,
+                                        quantity = 1
+                                    )
+                                }
+                                if (cartRequest != null) {
+                                    viewModelCart.addItemToCart(user, cartRequest)
+                                }
+                            }
+                        },
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = colorResource(id = R.color.brown) // Use saved color
                         ),
                         shape = RoundedCornerShape(40.dp),
+                        border = BorderStroke(2.dp, colorResource(id = R.color.brown)),
                         modifier = Modifier
                             .width(300.dp) // Custom width
                             .height(50.dp) // Custom height
@@ -277,11 +292,4 @@ private fun formatDistance(distance: Float?): String {
         // Format as kilometers with one decimal place
         String.format("%.1f km", distance / 1000)
     }
-}
-
-private fun startPaymentActivity(context: Context, token: String) {
-    val intent = Intent(context, PaymentActivity::class.java).apply {
-        putExtra("PAYMENT_TOKEN", token)
-    }
-    context.startActivity(intent)
 }

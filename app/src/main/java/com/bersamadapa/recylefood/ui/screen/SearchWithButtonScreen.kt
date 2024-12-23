@@ -70,6 +70,8 @@ fun SearchWithButtonScreen(
                 selectedFilter = when (selectedButton) {
                     "Resto Terdekat" -> MysteryBoxFilter.Nearest
                     "Resto Terbaik" -> MysteryBoxFilter.BestRated
+                    "Mystery Murah" -> MysteryBoxFilter.Cheapest
+                    "The Best Seller" -> MysteryBoxFilter.New
                     else -> MysteryBoxFilter.Nearest // Default filter
                 },
                 userLocation = location
@@ -120,10 +122,7 @@ fun SearchWithButtonScreen(
                         RestaurantButtonRow(
                             modifier = Modifier.padding(horizontal = 0.dp),
                             buttons = listOf(
-                                "Resto Terdekat",
-                                "Resto Terbaik",
-                                "The Best Seller",
-                                "Mystery Murah"
+                                selectedButton
                             ),
                             selectedButton = selectedButton,
                             onButtonClick = { selected ->

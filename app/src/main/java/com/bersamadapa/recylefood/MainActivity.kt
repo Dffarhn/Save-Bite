@@ -28,76 +28,145 @@ import com.bersamadapa.recylefood.ui.screen.LoadingScreen
 import com.bersamadapa.recylefood.ui.theme.RecyleFoodTheme
 import com.bersamadapa.recylefood.utils.LocationHelper
 import com.bersamadapa.recylefood.utils.QrScannerHelper
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import kotlinx.coroutines.launch
+import android.Manifest
+import android.os.Build
+import com.bersamadapa.recylefood.network.socket.SocketManager
+import com.bersamadapa.recylefood.utils.NotificationHelper
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var navController: NavController
     private lateinit var locationHelper: LocationHelper
     private var locationPermissionGranted = false
+    private var phoneStatePermissionGranted = false
     private lateinit var dataStoreManager: DataStoreManager
+    private lateinit var socketManager: SocketManager
+    private lateinit var notificationHelper: NotificationHelper
 
-    // Register for permission result
-    private val requestPermissionLauncher =
+
+    // Register for location permission result
+    private val requestLocationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                locationPermissionGranted = true
-                // Permission granted, now location can be fetched when required
-            } else {
-                // Permission denied, show a message to the user
+            locationPermissionGranted = isGranted
+            if (!isGranted) {
                 Toast.makeText(this, "Location permission is required", Toast.LENGTH_SHORT).show()
             }
         }
 
+    // Register for phone state permission result
+    private val requestPhoneStatePermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            phoneStatePermissionGranted = isGranted
+            if (!isGranted) {
+                Toast.makeText(this, "Phone state permission is required", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    private val requestPostNotificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                // Permission granted, proceed with notifications
+            } else {
+                Toast.makeText(this, "Notification permission is required", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dataStoreManager = DataStoreManager(this)
-            setContent {
-                RecyleFoodTheme {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
-                    ) {
-                        navController = rememberNavController()
+        notificationHelper = NotificationHelper(this)  // Initialize notificationHelper here
+        setContent {
+            RecyleFoodTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    navController = rememberNavController()
 
-                        // Loading state to wait until the userId is fetched
-                        val isUserChecked = remember { mutableStateOf(false) }
-                        val userId = remember { mutableStateOf<String?>(null) }
+                    // Loading state to wait until the userId is fetched
+                    val isUserChecked = remember { mutableStateOf(false) }
+                    val userId = remember { mutableStateOf<String?>(null) }
 
-                        // Check user login status
-                        LaunchedEffect(Unit) {
-                            dataStoreManager.userId.collect { id ->
-                                userId.value = id
-                                isUserChecked.value = true
+                    // Check user login status
+                    LaunchedEffect(Unit) {
+                        dataStoreManager.userId.collect { id ->
+                            userId.value = id
+                            isUserChecked.value = true
+                        }
+                    }
+
+                    // Initialize SocketManager with user ID
+                    socketManager = SocketManager(userId.value)
+
+                    // Connect to the server
+                    socketManager.connect()
+
+                    // Listen for notifications
+                    socketManager.listenForNotifications { title, message ->
+                        // Handle incoming notification
+
+                        // Show a custom notification using NotificationHelper (you can also use title and message)
+                        notificationHelper.showNotification(title, message)
+                    }
+
+
+                    // Only show navigation after userId is checked
+                    if (isUserChecked.value) {
+                        val navigateTo = intent.getStringExtra("navigateTo") // Get the intent extra
+
+                        // Set up the NavGraph
+                        AppNavGraph(
+                            navController = navController as NavHostController,
+                            userId = userId.value
+                        )
+
+                        // Navigate to OrderHistoryScreen if the intent requests it
+                        LaunchedEffect(navigateTo) {
+                            if (navigateTo == "orderHistory") {
+                                (navController as NavHostController).navigate("orderHistory")
                             }
                         }
-
-                        // Only show navigation after userId is checked
-                        if (isUserChecked.value) {
-                            AppNavGraph(navController = navController as NavHostController, userId = userId.value)
-                        } else {
-                            // Show a loading screen or just a blank screen while checking
-                            LoadingScreen()
-                        }
+                    } else {
+                        // Show a loading screen or just a blank screen while checking
+                        LoadingScreen()
                     }
                 }
             }
+        }
 
         // Initialize the LocationHelper and FusedLocationProviderClient
         locationHelper = LocationHelper(this)
 
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
         // Request location permission on launch if not already granted
         if (ContextCompat.checkSelfPermission(
                 this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            locationPermissionGranted = true // Permission already granted
+            locationPermissionGranted = true
         } else {
-            // Request permission
-            requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        // Request phone state permission on launch if not already granted
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.READ_PHONE_STATE
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            phoneStatePermissionGranted = true
+        } else {
+            requestPhoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
         }
     }
 
@@ -109,7 +178,6 @@ class MainActivity : ComponentActivity() {
     // Handle QR scanner result (delegate to the helper)
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        // Pass the initialized navController here
         QrScannerHelper.handleQrResult(this, requestCode, resultCode, data, navController)
     }
 }

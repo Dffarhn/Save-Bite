@@ -1,7 +1,11 @@
 package com.bersamadapa.recylefood.data.model
 
 data class OrderRequest (
-    val mysteryBox : List<String>
+    val mysteryBox : List<String>,
+    val category : String,
+    val addressReceiver : String? ,
+    val phoneNumberReceiver : String?,
+    val voucherId: String?
 )
 
 
