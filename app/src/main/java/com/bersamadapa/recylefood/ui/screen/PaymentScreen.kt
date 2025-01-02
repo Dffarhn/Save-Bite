@@ -324,6 +324,9 @@ fun BottomCartBar2(totalPrice: Double, userId:String, orderRequest:OrderRequest,
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
+        // Observe createOrderState from the ViewModel
+        val createOrderState by viewModelOrder.createOrderState.collectAsState()
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -335,14 +338,24 @@ fun BottomCartBar2(totalPrice: Double, userId:String, orderRequest:OrderRequest,
                 color = Color.White,
                 modifier = Modifier.weight(1f)
             )
-            Button(
-                onClick = {
-                    val user = userId // Use the appropriate user ID here
-                    viewModelOrder.createOrder(user, orderRequest)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.cream))
-            ) {
-                Text(text = "Bayar", color = Color.Black)
+
+            // Check if the state is loading
+            if (createOrderState is OrderState.Loading) {
+                // Show a loading spinner when the state is Loading
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                // Show the button when not loading
+                Button(
+                    onClick = {
+                        viewModelOrder.createOrder(userId, orderRequest)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.cream))
+                ) {
+                    Text(text = "Bayar", color = Color.Black)
+                }
             }
         }
     }

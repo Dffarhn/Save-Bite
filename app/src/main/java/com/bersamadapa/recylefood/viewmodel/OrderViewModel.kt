@@ -106,7 +106,9 @@ class OrderViewModel(private val orderRepository: OrderRepository) : ViewModel()
                             orders
                         }
 
-                        _getPendingOrdersState.value = GetAllOrdersState.Success(filteredOrders)
+                        val sortedOrders = filteredOrders.sortedByDescending { it.createdAt }
+
+                        _getPendingOrdersState.value = GetAllOrdersState.Success(sortedOrders)
                     },
                     onFailure = { exception ->
                         handleError(GetAllOrdersState.Error(exception.message ?: "Unknown error"), TAG)
@@ -137,7 +139,9 @@ class OrderViewModel(private val orderRepository: OrderRepository) : ViewModel()
                             orders
                         }
 
-                        _getOngoingOrdersState.value = GetAllOrdersState.Success(filteredOrders)
+                        val sortedOrders = filteredOrders.sortedByDescending { it.createdAt }
+
+                        _getOngoingOrdersState.value = GetAllOrdersState.Success(sortedOrders)
                     },
                     onFailure = { exception ->
                         handleError(GetAllOrdersState.Error(exception.message ?: "Unknown error"), TAG)
@@ -166,7 +170,9 @@ class OrderViewModel(private val orderRepository: OrderRepository) : ViewModel()
                         } else {
                             orders
                         }
-                        _getHistoryOrdersState.value = GetAllOrdersState.Success(filteredOrders)
+
+                        val sortedOrders = filteredOrders.sortedByDescending { it.createdAt }
+                        _getHistoryOrdersState.value = GetAllOrdersState.Success(sortedOrders)
                     },
                     onFailure = { exception ->
                         handleError(GetAllOrdersState.Error(exception.message ?: "Unknown error"), TAG)

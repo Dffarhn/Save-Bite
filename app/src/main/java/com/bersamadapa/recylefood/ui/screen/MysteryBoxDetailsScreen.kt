@@ -2,6 +2,7 @@ package com.bersamadapa.recylefood.ui.screen
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -255,6 +256,10 @@ fun MysteryBoxDetailScreen(
                                 }
                                 if (cartRequest != null) {
                                     viewModelCart.addItemToCart(user, cartRequest)
+
+                                    // Show success toast notification
+                                    Toast.makeText(context, "Item berhasil ditambahkan ke keranjang!", Toast.LENGTH_SHORT).show()
+
                                 }
                             }
                         },

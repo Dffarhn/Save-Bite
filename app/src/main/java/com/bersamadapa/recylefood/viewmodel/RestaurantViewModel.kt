@@ -23,6 +23,27 @@ class RestaurantViewModel(private val restaurantRepository: RestaurantRepository
     private val _restaurantFilterState = MutableStateFlow<RestaurantFilter>(RestaurantFilter.Rating)
     val restaurantFilterState: StateFlow<RestaurantFilter> get() = _restaurantFilterState
 
+
+    private val _updateRatingState = MutableStateFlow<UpdateRatingState>(UpdateRatingState.Idle)
+    val updateRatingState: StateFlow<UpdateRatingState> get() = _updateRatingState
+
+    // Function to update the restaurant rating
+    fun updateRestaurantRating(restaurantId: String, userRating: Float) {
+        viewModelScope.launch {
+            _updateRatingState.value = UpdateRatingState.Loading
+
+            val result = restaurantRepository.updateRestaurantRating(restaurantId, userRating)
+            result.fold(
+                onSuccess = {
+                    _updateRatingState.value = UpdateRatingState.Success
+                },
+                onFailure = { exception ->
+                    _updateRatingState.value = UpdateRatingState.Error(exception.message ?: "Unknown error")
+                }
+            )
+        }
+    }
+
     // Function to fetch the list of restaurants ordered by rating or distance based on the selected filter
     fun fetchRestaurants(selectedButton: String, userLocation: Location? = null) {
         viewModelScope.launch {
@@ -174,4 +195,11 @@ sealed class RestaurantDetailState {
 // Enum class to represent the type of filter being applied
 enum class RestaurantFilter {
     Rating, Distance
+}
+
+sealed class UpdateRatingState {
+    object Idle : UpdateRatingState() // No action taken yet
+    object Loading : UpdateRatingState() // Updating the rating in the repository
+    object Success : UpdateRatingState() // Successfully updated the rating
+    data class Error(val message: String) : UpdateRatingState() // Error during the update process
 }

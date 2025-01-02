@@ -101,6 +101,9 @@ fun CartScreen(
                 var currentRestaurant = ""
                 listOrderState.forEachIndexed { index, cartItem ->
                     val isFirstItemOfRestaurant = cartItem.restaurant?.name != currentRestaurant
+
+                    val cartId = cartItem.id
+
                     if (isFirstItemOfRestaurant) {
                         if (index != 0) {
                             HorizontalDivider(thickness = 1.dp, color = Color.Gray)
@@ -108,41 +111,48 @@ fun CartScreen(
                         currentRestaurant = cartItem.restaurant?.name.orEmpty()
                     }
 
-                    CartItem(
-                        restaurantName = if (isFirstItemOfRestaurant) cartItem.restaurant?.name else null,
-                        mysteryBox = cartItem.mysteryBoxData ?: emptyList(),
-                        quantity = cartItem.quantity,
-                        checkedItems = checkedItems,
-                        selectedRestaurant = selectedRestaurant,
-                        onCheckChange = { itemId, isChecked, price ->
-                            checkedItems[itemId] = isChecked
-                            totalPrice.value = if (isChecked) {
-                                totalPrice.value + price
-                            } else {
-                                totalPrice.value - price
+                    if (cartId != null) {
+                        CartItem(
+                            cartId = cartId,
+                            restaurantName = if (isFirstItemOfRestaurant) cartItem.restaurant?.name else null,
+                            mysteryBox = cartItem.mysteryBoxData ?: emptyList(),
+                            quantity = cartItem.quantity,
+                            checkedItems = checkedItems,
+                            selectedRestaurant = selectedRestaurant,
+                            onCheckChange = { itemId, isChecked, price ->
+                                checkedItems[itemId] = isChecked
+                                totalPrice.value = if (isChecked) {
+                                    totalPrice.value + price
+                                } else {
+                                    totalPrice.value - price
+                                }
+
+                                // Update selectedItemIds state
+                                selectedItemIds.value = if (isChecked) {
+                                    selectedItemIds.value + itemId
+                                } else {
+                                    selectedItemIds.value - itemId
+                                }
+                            },
+                            onRestaurantCheckChange = { restaurantName, restaurantItems, isChecked ->
+                                // Only allow selecting one restaurant at a time
+                                selectedRestaurant.value = if (isChecked) restaurantName else null
+                                // Uncheck items from other restaurants
+                                checkedItems.clear()
+                                totalPrice.value = 0.0
+
+                                // Update selected items for this restaurant
+                                restaurantItems.forEach { item ->
+                                    checkedItems[item.id] = isChecked
+                                    if (isChecked) totalPrice.value += item.price?.toDouble() ?: 0.0
+                                }
+                            } ,
+                            onDelete = { mysteryBoxId, cartItemId ->  // Make sure to pass correct parameters
+                                userId?.let { viewModelCart.deleteItemFromCart(it, cartItemId, mysteryBoxId) }
                             }
 
-                            // Update selectedItemIds state
-                            selectedItemIds.value = if (isChecked) {
-                                selectedItemIds.value + itemId
-                            } else {
-                                selectedItemIds.value - itemId
-                            }
-                        },
-                        onRestaurantCheckChange = { restaurantName, restaurantItems, isChecked ->
-                            // Only allow selecting one restaurant at a time
-                            selectedRestaurant.value = if (isChecked) restaurantName else null
-                            // Uncheck items from other restaurants
-                            checkedItems.clear()
-                            totalPrice.value = 0.0
-
-                            // Update selected items for this restaurant
-                            restaurantItems.forEach { item ->
-                                checkedItems[item.id] = isChecked
-                                if (isChecked) totalPrice.value += item.price?.toDouble() ?: 0.0
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -151,13 +161,15 @@ fun CartScreen(
 
 @Composable
 fun CartItem(
+    cartId: String,
     restaurantName: String?,
     mysteryBox: List<MysteryBox>,
     quantity: Int,
     checkedItems: MutableMap<String, Boolean>,
     selectedRestaurant: MutableState<String?>,
     onCheckChange: (String, Boolean, Int) -> Unit,
-    onRestaurantCheckChange: (String, List<MysteryBox>, Boolean) -> Unit
+    onRestaurantCheckChange: (String, List<MysteryBox>, Boolean) -> Unit,
+    onDelete: (String, String) -> Unit // Corrected onDelete callback
 ) {
     Column(
         modifier = Modifier
@@ -172,9 +184,7 @@ fun CartItem(
             ) {
                 Checkbox(
                     checked = selectedRestaurant.value == it,
-                    onCheckedChange = { isChecked ->
-                        onRestaurantCheckChange(it, mysteryBox, isChecked)
-                    }
+                    onCheckedChange = { isChecked -> onRestaurantCheckChange(it, mysteryBox, isChecked) }
                 )
                 Text(
                     text = it,
@@ -193,9 +203,7 @@ fun CartItem(
             ) {
                 Checkbox(
                     checked = checkedItems[box.id] == true,
-                    onCheckedChange = { isChecked ->
-                        box.price?.let { onCheckChange(box.id, isChecked, it) }
-                    }
+                    onCheckedChange = { isChecked -> box.price?.let { onCheckChange(box.id, isChecked, it) } }
                 )
                 Image(
                     painter = painterResource(id = R.drawable.mystery_box),
@@ -216,6 +224,13 @@ fun CartItem(
                         text = "Rp${box.price}",
                         fontSize = 14.sp,
                         color = colorResource(id = R.color.brown)
+                    )
+                }
+                IconButton(onClick = { onDelete(box.id, cartId) }) { // Corrected the parameters
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_delete),
+                        contentDescription = "Delete Item",
+                        tint = Color.Red
                     )
                 }
             }

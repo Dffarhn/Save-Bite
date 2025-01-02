@@ -38,6 +38,30 @@ class RestaurantRepository(private val firestore: FirebaseFirestore) {
 //        Result.failure(e)
 //    }
 
+    suspend fun updateRestaurantRating(restaurantId: String, userRating: Float): Result<Unit> {
+        return try {
+            // Get a reference to the restaurant document
+            val restaurantRef = firestore.collection(RESTAURANTS_COLLECTION).document(restaurantId)
+
+            // Fetch the current rating
+            val snapshot = restaurantRef.get().await()
+            val currentRating = snapshot.getDouble("rating")?.toFloat() ?: 0f
+
+            // Calculate the new rating
+            val newRating = (currentRating + userRating) / 2
+
+            // Update the rating in Firestore
+            restaurantRef.update("rating", newRating).await()
+
+            Log.d(TAG, "Successfully updated rating for restaurant $restaurantId to $newRating")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating restaurant rating: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+
     // Fetch restaurant details with products
     suspend fun getRestaurantDetailsWithProducts(idRestaurant: String): Result<Restaurant?> {
         return try {

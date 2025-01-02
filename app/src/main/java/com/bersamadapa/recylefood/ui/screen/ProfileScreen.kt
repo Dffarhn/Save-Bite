@@ -160,7 +160,7 @@ fun ProfileScreen(
                     HorizontalDivider()
 
                     ProfileMenuItem(
-                        icon = R.drawable.ic_promo,
+                        icon = R.drawable.ic_logout,
                         title = "Logout",
                         subtitle = "",
                         onClick = {

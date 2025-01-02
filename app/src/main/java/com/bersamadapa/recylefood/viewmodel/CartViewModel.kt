@@ -59,4 +59,24 @@ class CartViewModel(private val cartRepository: CartRepository) : ViewModel() {
             )
         }
     }
+
+    // Delete an item from the cart
+    fun deleteItemFromCart(userId: String, cartId:String,cartItemId: String) {
+        _isLoading.value = true
+        _errorMessage.value = null
+
+        viewModelScope.launch {
+            val result = cartRepository.deleteItemFromCart(userId, cartId, cartItemId)
+            _isLoading.value = false
+
+            result.fold(
+                onSuccess = {
+                    fetchCartItems(userId) // Refresh cart items after deletion
+                },
+                onFailure = { error ->
+                    _errorMessage.value = error.localizedMessage ?: "An error occurred"
+                }
+            )
+        }
+    }
 }
