@@ -28,11 +28,11 @@ class RestaurantViewModel(private val restaurantRepository: RestaurantRepository
     val updateRatingState: StateFlow<UpdateRatingState> get() = _updateRatingState
 
     // Function to update the restaurant rating
-    fun updateRestaurantRating(restaurantId: String, userRating: Float) {
+    fun updateRestaurantRating(restaurantId: String, userRating: Float, selling:Int) {
         viewModelScope.launch {
             _updateRatingState.value = UpdateRatingState.Loading
 
-            val result = restaurantRepository.updateRestaurantRating(restaurantId, userRating)
+            val result = restaurantRepository.updateRestaurantRating(restaurantId, userRating,selling)
             result.fold(
                 onSuccess = {
                     _updateRatingState.value = UpdateRatingState.Success

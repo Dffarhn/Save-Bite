@@ -89,6 +89,7 @@ fun OrderHistoryDetailScreen(
                 is GetOrderByIdState.Success -> {
                     val order = (orderState as GetOrderByIdState.Success).order
                     val restaurantId = order.mysteryBoxsData?.firstOrNull()?.restaurantData?.id
+                    val selling = order.mysteryBoxsData?.firstOrNull()?.restaurantData?.selling
 
                     LazyColumn(modifier = Modifier.padding(8.dp)) {
                         item {
@@ -206,7 +207,9 @@ fun OrderHistoryDetailScreen(
                                         errorMessage = null
 
                                         // Call the ViewModel function to update the rating
-                                        viewModelRestaurant.updateRestaurantRating(restaurantId, rating.toFloat())
+                                        if (selling != null) {
+                                            viewModelRestaurant.updateRestaurantRating(restaurantId, rating.toFloat(),selling)
+                                        }
 
                                         // Mark the review as submitted
                                         hasReviewed = true

@@ -44,30 +44,18 @@ class MainActivity : ComponentActivity() {
     private lateinit var notificationHelper: NotificationHelper
 
 
-    // Register for location permission result
-    private val requestLocationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            locationPermissionGranted = isGranted
-            if (!isGranted) {
-                Toast.makeText(this, "Location permission is required", Toast.LENGTH_SHORT).show()
-            }
-        }
+    private val requestPermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val locationPermissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+            val phoneStatePermissionGranted = permissions[Manifest.permission.READ_PHONE_STATE] ?: false
+            val notificationPermissionGranted = permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
 
-    // Register for phone state permission result
-    private val requestPhoneStatePermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            phoneStatePermissionGranted = isGranted
-            if (!isGranted) {
-                Toast.makeText(this, "Phone state permission is required", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-    private val requestPostNotificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                // Permission granted, proceed with notifications
+            if (locationPermissionGranted && phoneStatePermissionGranted && notificationPermissionGranted) {
+                // All permissions granted
+                Toast.makeText(this, "All permissions granted", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, "Notification permission is required", Toast.LENGTH_SHORT).show()
+                // Handle missing permissions
+                Toast.makeText(this, "Some permissions are missing", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -138,36 +126,14 @@ class MainActivity : ComponentActivity() {
         // Initialize the LocationHelper and FusedLocationProviderClient
         locationHelper = LocationHelper(this)
 
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPostNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-
-        // Request location permission on launch if not already granted
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            locationPermissionGranted = true
-        } else {
-            requestLocationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-
-        // Request phone state permission on launch if not already granted
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.READ_PHONE_STATE
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            phoneStatePermissionGranted = true
-        } else {
-            requestPhoneStatePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
-        }
+        // Request all permissions at once
+        requestPermissionsLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.READ_PHONE_STATE,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+        )
     }
 
     // Function to launch the QR scanner

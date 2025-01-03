@@ -72,7 +72,7 @@ fun PaymentScreen(
     val discountAmount = totalPriceBeforeDiscount * (voucherDiscountPercentage / 100.0)
 
     // Ensure the discount does not exceed the maximum allowed discount
-    val actualDiscount = minOf(discountAmount, maxDiscount)
+    val actualDiscount = minOf(discountAmount.toInt(), maxDiscount.toInt())
 
     // Total price after applying discount
     val totalPrice = totalPriceBeforeDiscount - actualDiscount
@@ -208,7 +208,7 @@ fun PaymentScreen(
             DetailsSection(
                 boxPrice = formatCurrency((totalPrice)),
                 adminFee = formatCurrency(4999.0),
-                discount = formatCurrency(actualDiscount),
+                discount = formatCurrency(actualDiscount.toDouble()),
                 total = formatCurrency(totalPrice.toDouble())
             )
         }

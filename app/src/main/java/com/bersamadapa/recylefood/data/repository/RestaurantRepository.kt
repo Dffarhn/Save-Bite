@@ -11,6 +11,8 @@ import com.bersamadapa.recylefood.data.repository.MysteryBoxRepository.Companion
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 class RestaurantRepository(private val firestore: FirebaseFirestore) {
 
@@ -38,29 +40,31 @@ class RestaurantRepository(private val firestore: FirebaseFirestore) {
 //        Result.failure(e)
 //    }
 
-    suspend fun updateRestaurantRating(restaurantId: String, userRating: Float): Result<Unit> {
+    suspend fun updateRestaurantRating(restaurantId: String, userRating: Float, selling: Int): Result<Unit> {
         return try {
             // Get a reference to the restaurant document
-            val restaurantRef = firestore.collection(RESTAURANTS_COLLECTION).document(restaurantId)
+            val restaurantRef = firestore.collection("restaurants").document(restaurantId)
 
-            // Fetch the current rating
+            // Fetch the current rating from the database
             val snapshot = restaurantRef.get().await()
-            val currentRating = snapshot.getDouble("rating")?.toFloat() ?: 0f
+            val currentRating = snapshot.getDouble("rating")?.toFloat() ?: 3f  // Default to 3 if no rating found
 
-            // Calculate the new rating
-            val newRating = (currentRating + userRating) / 2
+            // Calculate the new rating using the selling count to weight the rating
+            val weightedRating = (currentRating * selling + userRating) / (selling + 1)
+
+            // Round the weightedRating to one decimal place
+            val roundedRating = Math.round(weightedRating * 10f) / 10f
 
             // Update the rating in Firestore
-            restaurantRef.update("rating", newRating).await()
+            restaurantRef.update("rating", roundedRating.toInt()).await()
 
-            Log.d(TAG, "Successfully updated rating for restaurant $restaurantId to $newRating")
+            Log.d("TAG", "Successfully updated rating for restaurant $restaurantId to $roundedRating")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating restaurant rating: ${e.message}", e)
+            Log.e("TAG", "Error updating restaurant rating: ${e.message}", e)
             Result.failure(e)
         }
     }
-
 
     // Fetch restaurant details with products
     suspend fun getRestaurantDetailsWithProducts(idRestaurant: String): Result<Restaurant?> {
