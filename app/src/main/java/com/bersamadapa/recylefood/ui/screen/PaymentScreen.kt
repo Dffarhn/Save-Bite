@@ -79,6 +79,8 @@ fun PaymentScreen(
     // Dynamically set category based on donation or personal choice
     val category = if (isDonation) "Donation" else "Personal"
 
+    val boxPrice = mysteryBoxs.firstOrNull()?.price
+
     // OrderRequest with category and mystery box IDs, add address and phone number for donation
     val orderRequest = OrderRequest(
         mysteryBox = mysteryBoxs.map { it.id },
@@ -205,12 +207,14 @@ fun PaymentScreen(
             }
 
             // Payment Details Section
-            DetailsSection(
-                boxPrice = formatCurrency((totalPrice)),
-                adminFee = formatCurrency(4999.0),
-                discount = formatCurrency(actualDiscount.toDouble()),
-                total = formatCurrency(totalPrice.toDouble())
-            )
+            if (boxPrice != null) {
+                DetailsSection(
+                    boxPrice = formatCurrency((boxPrice.toDouble())),
+                    adminFee = formatCurrency(4999.0),
+                    discount = formatCurrency(actualDiscount.toDouble()),
+                    total = formatCurrency(totalPrice.toDouble())
+                )
+            }
         }
     }
 }
@@ -267,7 +271,7 @@ fun DetailsSection(boxPrice: String, adminFee: String, discount: String, total: 
         Column(modifier = Modifier.padding(8.dp)) {
             DetailRow(label = "Harga Mystery Box", value = boxPrice)
             DetailRow(label = "Layanan Admin", value = adminFee)
-            DetailRow(label = "Voucher Discount", value = discount)
+            DetailRow(label = "Voucher Discount", value = "-${discount}")
             Divider(modifier = Modifier.padding(vertical = 4.dp), color = Color.Black)
             DetailRow(label = "Total Harga", value = total, isBold = true)
         }
